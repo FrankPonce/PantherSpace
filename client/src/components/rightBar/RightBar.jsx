@@ -9,14 +9,12 @@ const RightBar = () => {
   const { currentUser } = useContext(AuthContext);
 
   // Fetch all users
-  const { isLoading, error, data: usersData } = useQuery(["allUsers"], () =>
-    makeRequest.get("/users/all").then((res) => {
-      return res.data;
-    })
+  const { isLoading: usersLoading, error: usersError, data: usersData } = useQuery(["allUsers"], () =>
+    makeRequest.get("/users/all").then((res) => res.data)
   );
 
   // Fetch relationships (who current user is following)
-  const { data: followingData } = useQuery(["relationships"], () =>
+  const { isLoading: followingLoading, data: followingData } = useQuery(["relationships"], () =>
     makeRequest.get("/relationships?followerUserId=" + currentUser.id).then((res) => res.data)
   );
 
@@ -24,7 +22,7 @@ const RightBar = () => {
 
   const mutation = useMutation(
     (userId) => {
-      if (followingData.includes(userId)) {
+      if (followingData?.includes(userId)) {
         return makeRequest.delete("/relationships?userId=" + userId);
       }
       return makeRequest.post("/relationships", { userId });
@@ -40,16 +38,18 @@ const RightBar = () => {
     mutation.mutate(userId);
   };
 
+  if (usersLoading || followingLoading) return "Loading...";
+
   return (
     <div className="rightBar">
       <div className="container">
         {/* Suggestions For You */}
         <div className="item">
           <span>Suggestions For You</span>
-          {isLoading
-            ? "loading..."
+          {usersError
+            ? "Error loading users"
             : usersData
-                ?.filter((user) => user.id !== currentUser.id) // Exclude the current user
+                ?.filter((user) => user.id !== currentUser.id && !followingData?.includes(user.id)) // Exclude the current user and already followed users
                 ?.map((user) => (
                   <div className="user" key={user.id}>
                     <div className="userInfo">
@@ -60,7 +60,7 @@ const RightBar = () => {
                     </div>
                     <div className="buttons">
                       <button onClick={() => handleFollow(user.id)}>
-                        {followingData.includes(user.id) ? "Following" : "Follow"}
+                        {followingData?.includes(user.id) ? "Following" : "Follow"}
                       </button>
                       <button>Dismiss</button>
                     </div>
@@ -68,31 +68,7 @@ const RightBar = () => {
                 ))}
         </div>
 
-        {/*
-        <div className="item">
-          <span>Latest Activities</span>
-          <div className="user">
-            <div className="userInfo">
-              <img
-                src="https://images.pexels.com/photos/4881619/pexels-photo-4881619.jpeg?auto=compress&cs=tinysrgb&w=1600"
-                alt=""
-              />
-              <p>
-                <span>Jane Doe</span> changed their cover picture
-              </p>
-            </div>
-            <span>1 min ago</span>
-          </div>
-          
-        </div>
-
-        */}
-        {/* 
-        <div className="item">
-          <span>Online Friends</span>
-          
-        </div>
-          */}
+        {/* Additional sections can go here if needed */}
       </div>
     </div>
   );

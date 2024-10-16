@@ -1,93 +1,81 @@
+// LeftBar.jsx
 import "./leftBar.scss";
-import Friends from "../../assets/1.png";
-import Groups from "../../assets/2.png";
-import Market from "../../assets/3.png";
-import Watch from "../../assets/4.png";
-import Memories from "../../assets/5.png";
-import Events from "../../assets/6.png";
-import Gaming from "../../assets/7.png";
-import Gallery from "../../assets/8.png";
-import Videos from "../../assets/9.png";
-import Messages from "../../assets/10.png";
-import Tutorials from "../../assets/11.png";
-import Courses from "../../assets/12.png";
-import Fund from "../../assets/13.png";
 import { AuthContext } from "../../context/authContext";
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { makeRequest } from "../../axios";
+
 
 const LeftBar = () => {
-
   const { currentUser } = useContext(AuthContext);
+  const [trendingHashtags, setTrendingHashtags] = useState([]);
 
-  
+  // Fetch posts data
+  const { isLoading, error, data } = useQuery(["leftbarPosts"], () =>
+    makeRequest.get("/posts").then((res) => res.data)
+  );
+
+  useEffect(() => {
+    if (!isLoading && !error && data) {
+      console.log("Fetched Posts Data:", data);
+
+      const hashtagCounts = {};
+      data.forEach((post) => {
+        // Adjust 'desc' to match your actual data field
+        const postDescription = post.desc || "";
+        const hashtagsInPost = postDescription.match(/#\w+/g);
+        console.log("Post Description:", postDescription);
+        console.log("Hashtags in Post:", hashtagsInPost);
+        if (hashtagsInPost) {
+          hashtagsInPost.forEach((hashtag) => {
+            const lowerCaseHashtag = hashtag.toLowerCase();
+            if (hashtagCounts[lowerCaseHashtag]) {
+              hashtagCounts[lowerCaseHashtag]++;
+            } else {
+              hashtagCounts[lowerCaseHashtag] = 1;
+            }
+          });
+        }
+      });
+      console.log("Hashtag Counts:", hashtagCounts);
+
+      // Convert the counts object into an array and sort
+      const trending = Object.entries(hashtagCounts)
+        .sort((a, b) => b[1] - a[1]) // Sort by count descending
+        .slice(0, 10) // Get top 10
+        .map((entry) => entry[0]); // Get the hashtag
+
+      console.log("Trending Hashtags:", trending);
+      setTrendingHashtags(trending);
+    }
+  }, [isLoading, error, data]);
+
   return (
     <div className="leftBar">
       <div className="container">
         <div className="menu">
           <div className="user">
-          <img src={`http://localhost:3000/upload/${currentUser.profilePic}`} alt="" />
-
+            <img
+              src={`http://localhost:3000/upload/${currentUser.profilePic}`}
+              alt=""
+            />
             <span>{currentUser.name}</span>
           </div>
           <div className="item">
-            <img src={Friends} alt="" />
-            <span>Friends</span>
-          </div>
-          <div className="item">
-            <img src={Groups} alt="" />
-            <span>Groups</span>
-          </div>
-          <div className="item">
-            <img src={Market} alt="" />
-            <span>Marketplace</span>
-          </div>
-          <div className="item">
-            <img src={Watch} alt="" />
-            <span>Watch</span>
-          </div>
-          <div className="item">
-            <img src={Memories} alt="" />
-            <span>Memories</span>
-          </div>
-        </div>
-        <hr />
-        <div className="menu">
-          <span>Your shortcuts</span>
-          <div className="item">
-            <img src={Events} alt="" />
-            <span>Events</span>
-          </div>
-          <div className="item">
-            <img src={Gaming} alt="" />
-            <span>Gaming</span>
-          </div>
-          <div className="item">
-            <img src={Gallery} alt="" />
-            <span>Gallery</span>
-          </div>
-          <div className="item">
-            <img src={Videos} alt="" />
-            <span>Videos</span>
-          </div>
-          <div className="item">
-            <img src={Messages} alt="" />
-            <span>Messages</span>
-          </div>
-        </div>
-        <hr />
-        <div className="menu">
-          <span>Others</span>
-          <div className="item">
-            <img src={Fund} alt="" />
-            <span>Fundraiser</span>
-          </div>
-          <div className="item">
-            <img src={Tutorials} alt="" />
-            <span>Tutorials</span>
-          </div>
-          <div className="item">
-            <img src={Courses} alt="" />
-            <span>Courses</span>
+            <span>Trending Hashtags</span>
+            {isLoading ? (
+              <div>Loading...</div>
+            ) : error ? (
+              <div>Error loading hashtags</div>
+            ) : trendingHashtags.length > 0 ? (
+              trendingHashtags.map((hashtag, index) => (
+                <div key={index} className="hashtag">
+                  {hashtag}
+                </div>
+              ))
+            ) : (
+              <div>No hashtags yet</div>
+            )}
           </div>
         </div>
       </div>

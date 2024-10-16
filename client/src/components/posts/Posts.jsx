@@ -20,5 +20,4 @@ const Posts = ({userId}) => {
     </div>
   );
 };
-
 export default Posts;
